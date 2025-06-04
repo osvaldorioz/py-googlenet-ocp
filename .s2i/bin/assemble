@@ -23,9 +23,12 @@ if [ ! -f "/tmp/src/python_packages/torch-2.3.0+cpu-cp312-cp312-linux_x86_64.whl
     }
 fi
 
-# Instalar dependencias de Python desde archivos locales (sin internet)
+# Instalar dependencias de Python
 if [ ! -d "/opt/app-root/lib/python3.12/site-packages/torch" ]; then
-    pip install --no-index --find-links ./python_packages torch==2.3.0+cpu torchvision==0.18.0 pillow==10.3.0 matplotlib==3.8.4 fastapi==0.111.0 uvicorn==0.29.0 python-multipart==0.0.9 pybind11==2.13.6
+    # Instalar torch, torchvision y pillow desde archivos locales
+    pip install --no-index --find-links ./python_packages torch==2.3.0+cpu torchvision==0.18.0 pillow==10.3.0
+    # Instalar las demás dependencias desde PIP_INDEX_URL
+    pip install --index-url ${PIP_INDEX_URL} matplotlib==3.8.4 fastapi==0.111.0 uvicorn==0.29.0 python-multipart==0.0.9 pybind11==2.13.6
 fi
 
 # Compilar el módulo C++ usando libtorch desde el PVC
@@ -44,7 +47,6 @@ mkdir -p /opt/app-root/src
 mkdir -p /opt/app-root/src/data
 cp googlenet.so /opt/app-root/src/
 cp main.py /opt/app-root/src/
-# No copiamos googlenet.pt ni imagenet_classes.txt porque están en el PVC
 
 # Configurar permisos
 chown -R 1001:0 /opt/app-root/src
