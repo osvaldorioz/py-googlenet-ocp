@@ -3,35 +3,71 @@
 # Directorio de trabajo
 cd /tmp/src
 
-# Ejecutar como root para instalar dependencias del sistema
-dnf install -y gcc-c++ python3.12-devel unzip tar --disablerepo=* --enablerepo=ubi-9-appstream-rpms && \
-    dnf clean all
+# Verificar si tar está disponible
+if ! command -v tar &> /dev/null; then
+    echo "Error: tar no está instalado. Intentando instalar dependencias como root..."
+    # Volver a intentar la instalación como root
+    if ! dnf install -y gcc-c++ python3.12-devel unzip tar --disablerepo=* --enablerepo=ubi-9-appstream-rpms; then
+        echo "Error: No se pudo instalar tar. Esto podría ser un problema de permisos o configuración del contenedor."
+        exit 1
+    fi
+fi
 
-# Verificar si las dependencias del sistema están instaladas
+# Verificar si g++ está instalado
 if ! command -v g++ &> /dev/null; then
     echo "Error: g++ no está instalado"
     exit 1
 fi
 
-# Recombinar las partes de libtorch.tar si no existe el directorio
-if [ ! -d "/tmp/libtorch" ]; then
+# Asegurar permisos en /tmp
+echo "Ajustando permisos en /tmp..."
+chmod -R 777 /tmp || {
+    echo "Warning: No se pudieron ajustar permisos en /tmp (permisos insuficientes). Continuando..."
+}
+
+# Recombinar las partes de libtorch.tar
+if [ ! -f "/tmp/libtorch.tar" ]; then
+    echo "Recombinando libtorch.tar..."
     cat /tmp/src/python_packages/libtorch.tar.part* > /tmp/libtorch.tar || {
         echo "Error: No se pudo recombinar libtorch.tar"
+        ls -la /tmp/src/python_packages/libtorch.tar.part*
         exit 1
     }
-    tar -xvf /tmp/libtorch.tar -C /tmp/ || {
-        echo "Error: No se pudo descomprimir libtorch.tar"
+    # Verificar el archivo recombinado
+    if [ ! -s "/tmp/libtorch.tar" ]; then
+        echo "Error: El archivo libtorch.tar está vacío o corrupto"
         exit 1
     }
+    # Verificar permisos del archivo recombinado
+    ls -la /tmp/libtorch.tar
 fi
 
-# Verificar la existencia de torch/script.h
-if [ ! -f "/tmp/libtorch/include/torch/script.h" ]; then
-    echo "Error: torch/script.h no se encuentra en /tmp/libtorch/include/torch"
-    ls -la /tmp/libtorch/include/torch || {
-        echo "Error: No se pudo listar /tmp/libtorch/include/torch"
+# Descomprimir libtorch.tar
+if [ ! -d "/tmp/libtorch" ]; then
+    echo "Descomprimiendo libtorch.tar..."
+    tar -xvf /tmp/libtorch.tar -C /tmp/ || {
+        echo "Error: No se pudo descomprimir libtorch.tar"
+        ls -la /tmp/libtorch.tar
+        tar --version
+        df -h /tmp  # Verificar espacio en disco
         exit 1
     }
+    # Verificar la estructura descomprimida
+    if [ ! -d "/tmp/libtorch/include/torch" ]; then
+        echo "Error: El directorio /tmp/libtorch/include/torch no se creó"
+        ls -la /tmp/libtorch || {
+            echo "Error: No se pudo listar /tmp/libtorch"
+            exit 1
+        }
+        exit 1
+    fi
+    # Verificar permisos del directorio descomprimido
+    ls -la /tmp/libtorch/include/torch
+fi
+
+# Verificar específicamente la presencia de script.h
+if [ ! -f "/tmp/libtorch/include/torch/script.h" ]; then
+    echo "Error: torch/script.h no se encuentra en /tmp/libtorch/include/torch"
     exit 1
 fi
 
