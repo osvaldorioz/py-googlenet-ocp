@@ -27,15 +27,23 @@ if [ ! -f "/tmp/src/python_packages/torch-2.3.0+cpu-cp312-cp312-linux_x86_64.whl
     }
 fi
 
+# Recombinar las partes de nvidia-cudnn-cu12 si no existe el archivo completo
+if [ ! -f "/tmp/src/python_packages/nvidia_cudnn_cu12-8.9.2.26-py3-none-manylinux1_x86_64.whl" ]; then
+    cat /tmp/src/python_packages/nvidia_cudnn_cu12-8.9.2.26-py3-none-manylinux1_x86_64.whl.part* > /tmp/src/python_packages/nvidia_cudnn_cu12-8.9.2.26-py3-none-manylinux1_x86_64.whl || {
+        echo "Error: No se pudo recombinar nvidia_cudnn_cu12-8.9.2.26-py3-none-manylinux1_x86_64.whl"
+        exit 1
+    }
+fi
+
 # Instalar dependencias de Python
 if [ ! -d "/opt/app-root/lib/python3.12/site-packages/torch" ]; then
-    pip install --no-index --find-links ./python_packages torch==2.3.0+cpu torchvision==0.18.0 pillow==10.3.0
+    pip install --no-index --find-links ./python_packages filelock nvidia-cudnn-cu12==8.9.2.26 torch==2.3.0+cpu torchvision==0.18.0 pillow==10.3.0
     pip install --index-url ${PIP_INDEX_URL} matplotlib==3.8.4 fastapi==0.111.0 uvicorn==0.29.0 python-multipart==0.0.9 pybind11==2.13.6
 fi
 
 # Compilar el módulo C++ usando libtorch desde /tmp/libtorch
 g++ -shared -fPIC -o googlenet.so main.cpp \
-    -I/usr/local/lib/python3.12/site-packages/pybind11/include \
+    -I/opt/app-root/lib/python3.12/site-packages/pybind11/include \
     -I/tmp/libtorch/include \
     -I/tmp/libtorch/include/torch/csrc/api/include \
     -I/usr/include/python3.12 \
