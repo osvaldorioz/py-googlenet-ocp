@@ -7,6 +7,12 @@ cd /tmp/src
 dnf install -y gcc-c++ python3.12-devel unzip tar --disablerepo=* --enablerepo=ubi-9-appstream-rpms && \
     dnf clean all
 
+# Verificar si las dependencias del sistema están instaladas
+if ! command -v g++ &> /dev/null; then
+    echo "Error: g++ no está instalado"
+    exit 1
+fi
+
 # Recombinar las partes de libtorch.tar si no existe el directorio
 if [ ! -d "/tmp/libtorch" ]; then
     cat /tmp/src/python_packages/libtorch.tar.part* > /tmp/libtorch.tar || {
@@ -17,6 +23,16 @@ if [ ! -d "/tmp/libtorch" ]; then
         echo "Error: No se pudo descomprimir libtorch.tar"
         exit 1
     }
+fi
+
+# Verificar la existencia de torch/script.h
+if [ ! -f "/tmp/libtorch/include/torch/script.h" ]; then
+    echo "Error: torch/script.h no se encuentra en /tmp/libtorch/include/torch"
+    ls -la /tmp/libtorch/include/torch || {
+        echo "Error: No se pudo listar /tmp/libtorch/include/torch"
+        exit 1
+    }
+    exit 1
 fi
 
 # Recombinar las partes de torch si no existe el archivo completo
@@ -35,9 +51,17 @@ if [ ! -f "/tmp/src/python_packages/nvidia_cudnn_cu12-8.9.2.26-py3-none-manylinu
     }
 fi
 
+# Recombinar las partes de nvidia-cublas-cu12 si no existe el archivo completo
+if [ ! -f "/tmp/src/python_packages/nvidia_cublas_cu12-12.1.3.1-py3-none-manylinux1_x86_64.whl" ]; then
+    cat /tmp/src/python_packages/nvidia_cublas_cu12-12.1.3.1-py3-none-manylinux1_x86_64.whl.part* > /tmp/src/python_packages/nvidia_cublas_cu12-12.1.3.1-py3-none-manylinux1_x86_64.whl || {
+        echo "Error: No se pudo recombinar nvidia_cublas_cu12-12.1.3.1-py3-none-manylinux1_x86_64.whl"
+        exit 1
+    }
+fi
+
 # Instalar dependencias de Python
 if [ ! -d "/opt/app-root/lib/python3.12/site-packages/torch" ]; then
-    pip install --no-index --find-links ./python_packages filelock nvidia-cudnn-cu12==8.9.2.26 torch==2.3.0+cpu torchvision==0.18.0 pillow==10.3.0
+    pip install --no-index --find-links ./python_packages filelock nvidia-cublas-cu12 nvidia-cudnn-cu12==8.9.2.26 torch==2.3.0+cpu torchvision==0.18.0 pillow==10.3.0
     pip install --index-url ${PIP_INDEX_URL} matplotlib==3.8.4 fastapi==0.111.0 uvicorn==0.29.0 python-multipart==0.0.9 pybind11==2.13.6
 fi
 
