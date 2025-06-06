@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 # Directorio de trabajo
@@ -9,12 +10,26 @@ if ! command -v g++ &> /dev/null; then
     exit 1
 fi
 
-# Copiar la carpeta libtorch desde el repositorio
+# Verificar si /mnt/data está montado (depuración opcional)
+echo "Verificando montaje de /mnt/data..."
+if [ ! -d "/mnt/data" ]; then
+    echo "Error: El directorio /mnt/data no está montado"
+    ls -la /
+    exit 1
+fi
+
+# Asegurar permisos en /mnt/data/libtorch
+echo "Ajustando permisos en /mnt/data/libtorch..."
+chmod -R 755 /mnt/data/libtorch || {
+    echo "Warning: No se pudieron ajustar permisos en /mnt/data/libtorch (permisos insuficientes). Continuando..."
+}
+
+# Copiar la carpeta libtorch desde el PVC
 if [ ! -d "/tmp/libtorch" ]; then
-    echo "Copiando carpeta libtorch desde el repositorio..."
-    cp -r /tmp/src/python_packages/libtorch /tmp/libtorch || {
-        echo "Error: No se pudo copiar la carpeta libtorch desde el repositorio"
-        ls -la /tmp/src/python_packages/libtorch
+    echo "Copiando carpeta libtorch desde el PVC..."
+    cp -r /mnt/data/libtorch /tmp/libtorch || {
+        echo "Error: No se pudo copiar la carpeta libtorch desde el PVC"
+        ls -la /mnt/data/libtorch
         exit 1
     }
     # Verificar la estructura copiada
@@ -25,12 +40,12 @@ if [ ! -d "/tmp/libtorch" ]; then
             exit 1
         }
         exit 1
-    fi
+    }
     # Verificar específicamente la presencia de script.h
     if [ ! -f "/tmp/libtorch/include/torch/script.h" ]; then
         echo "Error: torch/script.h no se encuentra en /tmp/libtorch/include/torch"
         exit 1
-    fi
+    }
 fi
 
 # Recombinar las partes de torch si no existe el archivo completo
