@@ -1,6 +1,5 @@
-
 #!/bin/bash
-
+# Version 1.0 
 # Directorio de trabajo
 cd /tmp/src
 
@@ -10,26 +9,12 @@ if ! command -v g++ &> /dev/null; then
     exit 1
 fi
 
-# Verificar si /mnt/data está montado (depuración opcional)
-echo "Verificando montaje de /mnt/data..."
-if [ ! -d "/mnt/data" ]; then
-    echo "Error: El directorio /mnt/data no está montado"
-    ls -la /
-    exit 1
-fi
-
-# Asegurar permisos en /mnt/data/libtorch
-echo "Ajustando permisos en /mnt/data/libtorch..."
-chmod -R 755 /mnt/data/libtorch || {
-    echo "Warning: No se pudieron ajustar permisos en /mnt/data/libtorch (permisos insuficientes). Continuando..."
-}
-
-# Copiar la carpeta libtorch desde el PVC
+# Copiar la carpeta libtorch desde el repositorio
 if [ ! -d "/tmp/libtorch" ]; then
-    echo "Copiando carpeta libtorch desde el PVC..."
-    cp -r /mnt/data/libtorch /tmp/libtorch || {
-        echo "Error: No se pudo copiar la carpeta libtorch desde el PVC"
-        ls -la /mnt/data/libtorch
+    echo "Copiando carpeta libtorch desde el repositorio..."
+    cp -r /tmp/src/python_packages/libtorch /tmp/libtorch || {
+        echo "Error: No se pudo copiar la carpeta libtorch desde el repositorio"
+        ls -la /tmp/src/python_packages/libtorch
         exit 1
     }
     # Verificar la estructura copiada
@@ -94,7 +79,6 @@ mkdir -p /opt/app-root/src
 mkdir -p /opt/app-root/src/data
 cp googlenet.so /opt/app-root/src/
 cp main.py /opt/app-root/src/
-# No copiamos googlenet.pt ni imagenet_classes.txt porque están en el PVC (si aplica)
 
 # Configurar permisos
 chown -R 1001:0 /opt/app-root/src
